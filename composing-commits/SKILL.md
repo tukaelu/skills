@@ -11,6 +11,7 @@ allowed-tools:
   - Bash(git config *)
   - Bash(git diff *)
   - Bash(git log *)
+  - Bash(git stash *)
   - Bash(git status *)
   - Bash(git switch *)
   - Glob
@@ -27,7 +28,7 @@ Analyze changed files, group related changes together, and create commits at an 
 
 1. Run `/composing-commits` or say "commit this" with staged or unstaged changes present
 2. The skill checks git status, branch, and recent log to understand context
-3. Each changed file is read to infer intent and change type
+3. Changes are analyzed to infer intent and change type
 4. A proposed commit plan (groups + messages) is presented — confirm or adjust
 5. Commits are executed group by group; a final log summary is shown
 
@@ -35,7 +36,7 @@ Analyze changed files, group related changes together, and create commits at an 
 
 ### Step 1: Assess the current state
 
-Check the changes and the project's commit style:
+Check the changes and the project's commit style. These commands are independent — run them all in parallel:
 
 ```bash
 git branch --show-current
@@ -43,10 +44,19 @@ git config --get commit.gpgsign
 git status
 git diff --stat HEAD
 git log --oneline -10
+git stash list
 ```
 
 **If GPG signing is enabled (`commit.gpgsign=true`), set a flag.**
 Do not prompt the user at this point. Confirm after Step 4 approval, before executing Step 5.
+
+**If `git stash list` returns any entries**, inform the user before proceeding:
+
+```
+Note: you have N stashed change(s). Make sure they are intentionally excluded from this commit.
+```
+
+Do not block on this — just surface the information and continue.
 
 **Always confirm with the user when on the main or master branch.**
 If the current branch is `main` or `master`, use AskUserQuestion to confirm before committing:
@@ -54,11 +64,11 @@ If the current branch is `main` or `master`, use AskUserQuestion to confirm befo
 ```javascript
 AskUserQuestion({
   questions: [{
-    question: "You are currently on the main branch. Do you want to commit directly to it?",
+    question: "You are currently on the main branch. How would you like to proceed?",
     header: "Branch Confirmation",
     options: [
-      { label: "Commit to main",          description: "Commit directly to the current branch" },
-      { label: "Create a working branch", description: "Create a new branch before committing" }
+      { label: "Create a working branch", description: "Create a new branch before committing" },
+      { label: "Commit to main",          description: "Commit directly to the current branch" }
     ],
     multiSelect: false
   }]
@@ -67,21 +77,39 @@ AskUserQuestion({
 
 If "Create a working branch" is selected, ask for a branch name as a follow-up text question, run `git switch -c <branch>` with the specified name, then continue.
 
-If there are already staged files, confirm the user's intent before proceeding:
-- Commit as-is (go to Step 4)
-- Analyze including unstaged changes (go to Step 2)
+If there are already staged files, confirm the user's intent with AskUserQuestion before proceeding:
+
+```javascript
+AskUserQuestion({
+  questions: [{
+    question: "Some files are already staged. How would you like to proceed?",
+    header: "Staged Files",
+    options: [
+      { label: "Analyze all changes",       description: "Include unstaged changes in the analysis (Step 2)" },
+      { label: "Commit as-is",              description: "Commit only the already-staged files (skips Step 2)" }
+    ],
+    multiSelect: false
+  }]
+})
+```
+
+If "Analyze all changes" is selected, continue to Step 2 as normal.
+
+If "Commit as-is" is selected, run `git diff --cached` to understand the staged content. Treat all staged files as a single commit group, then skip to Step 4.
 
 ### Step 2: Read the changes and understand the intent
 
-For each file identified by the stat output in Step 1, read the diff to understand the intent behind the change. Analyze from the following angles:
+Retrieve all diffs in a single command rather than per-file:
+
+```bash
+git diff HEAD
+```
+
+Then analyze the output to understand the intent behind each change. Analyze from the following angles:
 
 - **Type of change**: feature addition / bug fix / refactoring / test addition / config change / documentation update
 - **Purpose of change**: why it was changed (the axis for deciding whether changes belong together)
 - **Relationship between files**: look for combinations that make sense when changed together
-
-```bash
-git diff HEAD -- <file>
-```
 
 Untracked new files are not included in `git diff HEAD`, so use Read to inspect their contents.
 
@@ -103,7 +131,7 @@ If a single changed file contains multiple intents mixed together, consider usin
 
 ### Step 4: Present the plan to the user and get confirmation
 
-**Always confirm before executing.** Propose in the following format:
+**Always confirm before executing.** First output the proposed plan as text:
 
 ```
 Proposed commits (N total):
@@ -117,15 +145,34 @@ Commit 1: feat(auth): implement JWT-based authentication
 Commit 2: chore: update ESLint configuration
   Files:
     - .eslintrc.json (modified)
-
-Proceed with this plan?
 ```
 
-If changes are requested, adjust the grouping and re-propose.
+Then immediately follow with AskUserQuestion:
+
+```javascript
+AskUserQuestion({
+  questions: [{
+    question: "Proceed with this commit plan?",
+    header: "Commit Plan",
+    options: [
+      { label: "Proceed", description: "Execute commits as proposed" },
+      { label: "Modify",  description: "Adjust grouping or commit messages" },
+      { label: "Cancel",  description: "Abort without committing" }
+    ],
+    multiSelect: false
+  }]
+})
+```
+
+If "Modify" is selected, ask a follow-up text question for specific changes, adjust the plan, and re-propose from the top of Step 4.
+
+If "Cancel" is selected, stop immediately.
 
 ### Step 5: Execute commits for each group
 
-Once approved, if the GPG flag is set, confirm with AskUserQuestion before committing:
+Once approved, if GPG is not set, create commits in group order immediately.
+
+If the GPG flag is set, confirm with AskUserQuestion before committing:
 
 ```javascript
 AskUserQuestion({
@@ -134,29 +181,51 @@ AskUserQuestion({
     header: "GPG Signing",
     options: [
       { label: "Commit with --no-gpg-sign", description: "Skip GPG signing for this session only" },
-      { label: "Cancel",                    description: "Abort the process (please commit manually from your terminal)" }
+      { label: "Run myself",                description: "Output commands to run manually in your terminal" },
+      { label: "Cancel",                    description: "Abort without committing" }
     ],
     multiSelect: false
   }]
 })
 ```
 
-If "Cancel" is selected, output the commit plan confirmed in Step 4 as runnable commands and stop:
+If "Cancel" is selected, stop without outputting anything further.
 
-```
-Aborted because GPG signing is required.
-Please run the following commands from your terminal:
+If "Run myself" is selected, output the commit plan as copy-paste-ready commands and stop. To avoid heredoc interpretation issues, **separate the `git add` and `git commit` commands into distinct blocks**. Use a plain quoted string for the message (no heredoc):
 
-# Commit 1
+````
+GPG signing is required. Please run the following commands from your terminal:
+
+---
+
+### Commit 1: `feat(auth): implement JWT-based authentication`
+
+```bash
 git add src/auth/jwt.ts src/auth/middleware.ts tests/auth/jwt.test.ts
+```
+
+```bash
 git commit -m "feat(auth): implement JWT-based authentication
 
-Introduced JWT to replace the existing session-based authentication."
+Introduced JWT to replace the existing session-based authentication.
 
-# Commit 2
-git add .eslintrc.json
-git commit -m "chore: update ESLint configuration"
+Co-Authored-By: <model-name> <noreply@anthropic.com>"
 ```
+
+---
+
+### Commit 2: `chore: update ESLint configuration`
+
+```bash
+git add .eslintrc.json
+```
+
+```bash
+git commit -m "chore: update ESLint configuration
+
+Co-Authored-By: <model-name> <noreply@anthropic.com>"
+```
+````
 
 If "Commit with --no-gpg-sign" is selected, create commits in group order.
 
@@ -188,11 +257,7 @@ EOF
 
 `[--no-gpg-sign]` is only included when the GPG flag is set and the user has approved it.
 
-After all groups are complete, verify the commits with `git log --oneline -N` (where N is the number of commits) and report the list:
-
-```bash
-git log --oneline -3
-```
+After all groups are complete, verify the commits with `git log --oneline -N` (N = number of commits just created) and report the list:
 
 ```
 ✓ 2 commits created
@@ -238,5 +303,6 @@ Write messages in the language used by the project (e.g., use Japanese for a Jap
 - **Large changesets (50+ files)**: First explain the overall picture of the changes, then discuss a grouping strategy.
 - **Sensitive files**: Warn before including files with credentials such as `.env` in a commit.
 - **If a pre-commit hook fails**: Review the hook's error output, fix the issue, and retry the commit. Only suggest `--no-verify` if the user explicitly requests it.
+- **If a commit fails for other reasons**: Show the raw error output and diagnose the cause before retrying. Common cases: `index.lock` already exists (another git process is running — suggest removing `.git/index.lock` after confirming no other process holds it), file permission errors (report the affected path), or disk-full errors (report immediately and stop).
 - **Nothing to commit**: Inform the user that there are no files to stage and show the output of `git status`.
 - **Accurate Co-Authored-By attribution**: Replace `<model-name>` in the commit template with the exact model currently in use (e.g., `Claude Sonnet 4.6`).
