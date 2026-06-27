@@ -1,54 +1,54 @@
-# ASCII Art Examples for Mermaid Diagrams
+# Mermaid ダイアグラム用 ASCII アートの例
 
-Sketch style examples for each diagram type. The goal of ASCII art is not perfect representation —
-it's a structural checkpoint: "Does this look right?" Use real node names from the user's content.
+各ダイアグラムタイプのスケッチスタイル例。ASCII アートの目的は完全な表現ではなく、
+構造のチェックポイントである:「これでいいですか？」という確認のために使う。ユーザーの内容から実際のノード名を使用する。
 
 ---
 
-## Flowchart (flowchart)
+## フローチャート (flowchart)
 
 ```
-[Start]
+[開始]
   |
   v
-[Input validation] --NG--> [Show error] --> [End]
+[入力値の検証] --NG--> [エラー表示] --> [終了]
   |
  OK
   |
   v
-[Data processing]
+[データ処理]
   |
   v
-[Condition A?] --No--> [Process B]
+[条件 A？] --いいえ--> [処理 B]
   |                         |
- Yes                        |
+ はい                       |
   |                         |
   v                         v
-[Process A] ---------->[Output result] --> [End]
+[処理 A] ---------->[結果の出力] --> [終了]
 ```
 
 ---
 
-## Sequence Diagram (sequenceDiagram)
+## シーケンス図 (sequenceDiagram)
 
 ```
-User           API Server      Database
+ユーザー         APIサーバー        データベース
   |                |               |
   |--POST /login-->|               |
   |                |--SELECT user->|
-  |                |<--user record-|
+  |                |<--ユーザー記録-|
   |<--200 + token--|               |
   |                |               |
   |--GET /data---->|               |
   |  (Authorization: Bearer token) |
   |                |--SELECT data->|
-  |                |<--data rows---|
+  |                |<--データ行----|
   |<--200 + JSON---|               |
 ```
 
 ---
 
-## Class Diagram (classDiagram)
+## クラス図 (classDiagram)
 
 ```
 ┌───────────────┐            ┌───────────────┐
@@ -74,7 +74,7 @@ User           API Server      Database
 
 ---
 
-## ER Diagram (erDiagram)
+## ER 図 (erDiagram)
 
 ```
 ┌──────────────┐        ┌──────────────┐        ┌──────────────┐
@@ -90,67 +90,67 @@ User           API Server      Database
 
 ---
 
-## State Diagram (stateDiagram-v2)
+## 状態図 (stateDiagram-v2)
 
 ```
         ┌──────────────────────────────┐
         │                              │
-        v                              │ retry
-    [Idle] ──start──> [Processing] ──error──> [Error]
+        v                              │ 再試行
+    [待機] ──開始──> [処理中] ──エラー──> [エラー]
                            |
-                          done
+                          完了
                            |
                            v
-                        [Done] ──reset──> [Idle]
+                        [完了] ──リセット──> [待機]
 ```
 
 ---
 
-## Gantt Chart (gantt)
+## ガントチャート (gantt)
 
 ```
-Task                 | Week1 | Week2 | Week3 | Week4
+タスク               | 第1週 | 第2週 | 第3週 | 第4週
 ─────────────────────|───────|───────|───────|──────
-Requirements         | █████ |       |       |
-System design        |       | █████ |       |
-Detailed design      |       | ██    |       |
-Implementation       |       |    ██ | █████ | ██
-Testing              |       |       |    ██ | ███
-Release              |       |       |       |   █
+要件定義             | █████ |       |       |
+システム設計         |       | █████ |       |
+詳細設計             |       | ██    |       |
+実装                 |       |    ██ | █████ | ██
+テスト               |       |       |    ██ | ███
+リリース             |       |       |       |   █
 ```
 
 ---
 
-## Mind Map (mindmap)
+## マインドマップ (mindmap)
 
 ```
-                  [Project Plan]
+                  [プロジェクト計画]
                  /       |       \
-         [Scope]    [Schedule]   [Resources]
+         [スコープ]  [スケジュール]  [リソース]
          /    \          |          /     \
-     [Feat A][Feat B] [Milestones] [Team] [Budget]
+   [機能A][機能B] [マイルストーン] [チーム] [予算]
                           |
-                    [M1: Design done]
-                    [M2: Dev done]
-                    [M3: Release]
+                    [M1: 設計完了]
+                    [M2: 開発完了]
+                    [M3: リリース]
 ```
 
 ---
 
-## Pie Chart (pie)
+## 円グラフ (pie)
 
 ```
-Revenue breakdown:
+収益内訳:
 
-Product A : 40% ████████████████
-Product B : 35% ██████████████
-Product C : 15% ██████
-Other     : 10% ████
+製品 A : 40% ████████████████
+製品 B : 35% ██████████████
+製品 C : 15% ██████
+その他 : 10% ████
 ```
 
 ---
 
-## Git Graph (gitGraph)
+## Git グラフ (gitGraph)
 
 ```
 main:    ●─────●─────────────────●─────●
@@ -162,23 +162,24 @@ feature/login:     ●─────●───●
 
 ---
 
-## Timeline (timeline)
+## タイムライン (timeline)
 
 ```
-2020 ─── Project kickoff
-          └── Team formed
-2021 ─── Beta release
-          └── User testing begins
-2022 ─── v1.0 official release
-          └── Paid plans launched
-2023 ─── v2.0 major update
-          └── Mobile app support
+2020 ─── プロジェクト発足
+          └── チーム結成
+2021 ─── ベータリリース
+          └── ユーザーテスト開始
+2022 ─── v1.0 正式リリース
+          └── 有料プラン開始
+2023 ─── v2.0 メジャーアップデート
+          └── モバイルアプリ対応
 ```
 
 ---
 
-## Tips
+## ヒント
 
-- For complex diagrams, show only the key paths/elements — no need to represent everything
-- Include arrow labels (conditions, action names) to make the structure clearer
-- Placeholder names are fine — the goal is to align on structure, not perfect naming
+- 複雑なダイアグラムは主要なパスや要素のみ表示する（すべてを表現する必要はない）
+- 矢印にラベル（条件やアクション名）を付けると構造がより明確になる
+- プレースホルダーの名前でも構わない（目的は完璧な命名ではなく、構造の合意を得ることだ）
+
